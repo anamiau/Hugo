@@ -1,21 +1,29 @@
-
 <html>
-  <head>
-  </head>
-  <body>
-    <h1>CADASTRAR</h1>
+    <head>
+    <style>
+        body {
+            background-color: lightblue;
+            height: auto;
+            margin: 0;
+            color: 	DA70D6;
+            font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+        }
+    </style>
+    </head>
+    <body> 
+    <h1>CADASTRO</h1>
     <form method="post" action="">
-      <label>Email ou Numero ou CPF</label>
-      <br><input name="emailnumero" size="25" type="text" autocomplete="off" required>
-      <br><br>
-      
-      <label>Senha</label>
-      <br><input name="senha" size="10" type="password" autocomplete="off" required>
-      <br><br> 
-      
-      <button type="submit" name="cadastrar">Cadastrar</button>
+    <label>Email/Numero/CPF</label>
+    <input name="emailnumero" size="25" type="text" autocomplete="off" required>
+    <br>
+    <label>Senha</label>
+    <input name="senha" size="10" type="password" autocomplete="off" required>
+    <br><br>
+    
+    
+    <button type="submit" name="cadastrar">Cadastrar</button>
     </form>
-  </body>
+    </body>
 </html>
 
 <?php
@@ -23,13 +31,14 @@ include "conexao.php";
 
 if (isset($_POST['cadastrar'])):
 
-    $entrada = trim($_POST['emailnumero']);  
+    $em = trim($_POST['emailnumero']);  
     $senha = trim($_POST['senha']);
     
     if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/', $senha)) {
         echo "A senha deve ter no mínimo 8 caracteres, conter uma letra maiúscula, uma minúscula e um símbolo.";
         exit;
     }
+
 
     function validaCPF($cpf) {
         $cpf = preg_replace('/[^0-9]/', '', $cpf); 
@@ -43,34 +52,33 @@ if (isset($_POST['cadastrar'])):
         return true;
     }
 
-    $is_cpf = validaCPF($entrada);
-    $is_email = filter_var($entrada, FILTER_VALIDATE_EMAIL);
-    $is_telefone = preg_match('/^[0-9]{10,11}$/', $entrada);
 
-    if (!$is_email && !$is_telefone && !$is_cpf) {
-        echo 'Digite um email, telefone ou CPF válido! <br> <img src="https://media.tenor.com/WlJsOVX2lysAAAAi/cat-tongue-cat.gif">';
+    $vcpf = validaCPF($em);
+    $vemail = filter_var($em, FILTER_VALIDATE_EMAIL);
+    $is_telefone = preg_match('/^[0-9]{10,11}$/', $em);
+
+    if (!$vemail && !$is_telefone && !$vcpf) {
+        echo 'Digite um email, telefone ou CPF válido! ';
         exit;
     }
-
-    if ($is_cpf) {
-        $entrada_final = password_hash($entrada, PASSWORD_DEFAULT);
+    if ($vcpf) {
+        $entrada_final = password_hash($em, PASSWORD_DEFAULT);
     } else {
-        $entrada_final = $entrada;
+        $entrada_final = $em;
     }
 
     $senha_final = password_hash($senha, PASSWORD_DEFAULT);
 
+
     $sql = mysqli_query($conexao, 
-        "INSERT INTO `teste`(`emailnumero`, `senha`) 
+        "INSERT INTO `cadastro`(`emailnumero`, `senha`) 
         VALUES ('$entrada_final','$senha_final')"
     );
 
     if ($sql) {
-        echo 'Cadastro realizado com sucesso! <br>
-        <img src="https://media.tenor.com/WlJsOVX2lysAAAAi/cat-tongue-cat.gif">';
+        echo 'Cadastrado com sucesso! <br>';
     } else {
-        echo 'Erro ao cadastrar: ' . mysqli_error($conexao);
+        echo 'Erro ao cadastrar:   ' . mysqli_error($conexao);
     }
 
 endif;
-?>
