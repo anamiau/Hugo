@@ -1,0 +1,134 @@
+<?php
+$mensagem = [];
+
+function validarCPF($cpf) {
+    $cpf = preg_replace('/[^0-9]/', '', $cpf);
+    if (strlen($cpf) != 11) return false;
+    if (preg_match('/(\d)\1{10}/', $cpf)) return false;
+    for ($t = 9; $t < 11; $t++) {
+        $soma = 0;
+        for ($c = 0; $c < $t; $c++) {
+            $soma += $cpf[$c] * (($t + 1) - $c);
+        }
+        $digito = ((10 * $soma) % 11) % 10;
+        if ($cpf[$t] != $digito) return false;
+    }
+    return true;
+}
+
+function validarSenha($senha) {
+    return preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*[\d])(?=.*[\W_]).{8,}$/', $senha);
+}
+
+function validarNascimento($nasc) {
+    if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $nasc, $m)) {
+        return checkdate((int)$m[2], (int)$m[1], (int)$m[3]);
+    }
+    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $nasc, $m)) {
+        return checkdate((int)$m[2], (int)$m[3], (int)$m[1]);
+    }
+    return false;
+}
+
+function validarCEP($cep) {
+    $cep = preg_replace('/[^0-9]/', '', $cep);
+    return strlen($cep) === 8;
+}
+
+function normalizarCEP($cep) {
+    return preg_replace('/[^0-9]/', '', $cep);
+}
+
+function normalizarData($nasc) {
+    if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $nasc, $m)) {
+        return "{$m[3]}-{$m[2]}-{$m[1]}";
+    }
+    return $nasc;
+}
+
+include "conexao.php";
+
+if (isset($_POST['enviar'])):
+    $login = trim($_POST['login']);
+    $cpf   = trim($_POST['cpf']);
+    $nasc  = trim($_POST['nasc']);
+    $senha = trim($_POST['senha']);
+    $cep   = trim($_POST['cep']);
+
+    $emailValido    = filter_var($login, FILTER_VALIDATE_EMAIL);
+    $telefoneValido = preg_match('/^[0-9]{10,15}$/', preg_replace('/[^0-9]/', '', $login));
+    $cpfValido      = validarCPF($cpf);
+    $nascValido     = validarNascimento($nasc);
+    $senhaValida    = validarSenha($senha);
+    $cepValido      = validarCEP($cep);
+
+    $erros = [];
+    if (!$emailValido && !$telefoneValido) $erros[] = "E-mail ou telefone inválido.";
+    if (!$cpfValido)   $erros[] = "CPF inválido.";
+    if (!$nascValido)  $erros[] = "Data de nascimento inválida.";
+    if (!$senhaValida) $erros[] = "Senha não atende aos requisitos.";
+    if (!$cepValido)   $erros[] = "CEP inválido.";
+
+    if (empty($erros)) {
+        $cpfHash       = hash('sha256', preg_replace('/[^0-9]/', '', $cpf));
+        $senhaCrip     = password_hash($senha, PASSWORD_DEFAULT);
+        $nascFormatado = normalizarData($nasc);
+        $cepFormatado  = normalizarCEP($cep);
+
+        $loginEsc = mysqli_real_escape_string($conexao, $login);
+        $nascEsc  = mysqli_real_escape_string($conexao, $nascFormatado);
+        $cepEsc   = mysqli_real_escape_string($conexao, $cepFormatado);
+
+        $sql = mysqli_query($conexao,
+            "INSERT INTO cadastro(`login`, `cpf`, `data_nascimento`, `senha`, `cep`)
+            VALUES('$loginEsc', '$cpfHash', '$nascEsc', '$senhaCrip', '$cepEsc')"
+        );
+
+        if ($sql) {
+            $mensagem = ['tipo' => 'sucesso', 'texto' => 'Cadastro realizado com sucesso!'];
+        } else {
+            $mensagem = ['tipo' => 'erro', 'texto' => 'Erro ao salvar: ' . mysqli_error($conexao)];
+        }
+    } else {
+        $mensagem = ['tipo' => 'erro', 'texto' => implode(' &nbsp;|&nbsp; ', $erros)];
+    }
+endif;
+?>
+
+<html>
+<head>
+<title>Cadastro</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+
+<form method="post" action="">
+
+<label>Email/Telefone:</label>
+<input name="login" size="20">
+
+<label>CPF:</label>
+<input name="cpf" size="15">
+
+<label>Data de nascimento:</label>
+<input  name="nasc" type="date">
+
+<label>Senha:</label> 
+<input name="senha" size="40" type="password">
+
+<label>CEP:</label>
+<input name="cep" size="10">
+
+<button type="submit" name="enviar">Cadastrar</button>
+
+<p>A senha deve coneter no mínimo: <br> 8 caracteres <br> Uma letra minúscula <br> Uma letra maiúscula <br> Um caractere especial <br> Um número</p>
+
+
+
+</form>
+
+</body>
+</html>
